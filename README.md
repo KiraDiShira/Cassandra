@@ -5,4 +5,4 @@
 
 ## Prerequisites
 
-- [Partitioning vs Sharding]()
+- [Partitioning vs Sharding](https://github.com/KiraDiShira/Cassandra/blob/master/Prerequisites/PartitioningVsSharding/Readme.md#partitioning-vs-sharding)
