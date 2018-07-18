@@ -34,85 +34,51 @@ But as we’ll see later, scaling data stores means making certain trade-offs be
 
 In the real world there are several consistency models available to architects. Let’s take a look at these models so we can understand the trade-offs:
 
-Assume that the following case occurs:[3]
+Assume that the following case occurs:
 
+```
 The row X is replicated on nodes M and N
 The client A writes row X to node M
 After a period of time t, client B reads row X from node N
+```
+
 The consistency model has to determine whether client B sees the write from client A or not.
 
-Strict consistency
-This is sometimes called sequential consistency, and is the most stringent level of
-consistency. It requires that any read will always return the most recently written
-value. That sounds perfect, and it’s exactly what I’m looking for. I’ll take it! How‐
-ever, upon closer examination, what do we find? What precisely is meant by
-“most recently written”? Most recently to whom? In one single-processor
-machine, this is no problem to observe, as the sequence of operations is known
-to the one clock. But in a system executing across a variety of geographically dis‐
-persed data centers, it becomes much more slippery. Achieving this implies some
-sort of global clock that is capable of timestamping all operations, regardless of
-the location of the data or the user requesting it or how many (possibly disparate)
-services are required to determine the response
+**Strict consistency**
 
-Causal consistency
-This is a slightly weaker form of strict consistency. It does away with the fantasy
-of the single global clock that can magically synchronize all operations without
-creating an unbearable bottleneck. Instead of relying on timestamps, causal con‐
-sistency instead takes a more semantic approach, attempting to determine the
-cause of events to create some consistency in their order. It means that writes that
-are potentially related must be read in sequence. If two different, unrelated oper‐
-ations suddenly write to the same field, then those writes are inferred not to be
-causally related. But if one write occurs after another, we might infer that they
-are causally related. Causal consistency dictates that causal writes must be read in
-sequence.
-Weak (eventual) consistency
-Eventual consistency means on the surface that all updates will propagate
-throughout all of the replicas in a distributed system, but that this may take some
-time. Eventually, all replicas will be consistent.
+This is sometimes called sequential consistency, and is the most stringent level of consistency. It requires that any read will always return the most recently written value. That sounds perfect, and it’s exactly what I’m looking for. I’ll take it! How‐ ever, upon closer examination, what do we find? What precisely is meant by “most recently written”? Most recently to whom? In one single-processor machine, this is no problem to observe, as the sequence of operations is known to the one clock. But in a system executing across a variety of geographically dispersed data centers, it becomes much more slippery. Achieving this implies some sort of global clock that is capable of timestamping all operations, regardless of the location of the data or the user requesting it or how many (possibly disparate) services are required to determine the response
 
-Eventual consistency becomes suddenly very attractive when you consider what is
-required to achieve stronger forms of consistency.
+**Causal consistency**
 
-When considering consistency, availability, and partition tolerance, we can achieve
-only two of these goals in a given distributed system, a trade-off known as the CAP
-theorem.
+This is a slightly weaker form of strict consistency. It does away with the fantasy of the single global clock that can magically synchronize all operations without creating an unbearable bottleneck. Instead of relying on timestamps, causal consistency instead takes a more semantic approach, attempting to determine the cause of events to create some consistency in their order. It means that writes that are potentially related must be read in sequence. If two different, unrelated operations suddenly write to the same field, then those writes are inferred not to be causally related. But if one write occurs after another, we might infer that they are causally related. Causal consistency dictates that causal writes must be read in sequence.
 
-At the center of the problem is data update replication. To achieve a strict
-consistency, all update operations will be performed synchronously, meaning that
-they must block, locking all replicas until the operation is complete, and forcing com‐
-peting clients to wait. A side effect of such a design is that during a failure, some of
-the data will be entirely unavailable. 
+**Weak (eventual) consistency**
 
-We could alternatively take an optimistic approach to replication, propagating
-updates to all replicas in the background in order to avoid blowing up on the client.
-The difficulty this approach presents is that now we are forced into the situation of
-detecting and resolving conflicts. A design approach must decide whether to resolve
-these conflicts at one of two possible times: during reads or during writes. That is, a
-distributed database designer must choose to make the system either always readable
-or always writable.
-Dynamo and Cassandra choose to be always writable, opting to defer the complexity
-of reconciliation to read operations, and realize tremendous performance gains. The
-alternative is to reject updates amidst network and server failures.
-In Cassandra, consistency is not an all-or-nothing proposition. We might more accu‐
-rately term it “tuneable consistency” because the client can control the number of
-replicas to block on for all updates. This is done by setting the **consistency level**
-against the **replication factor**.
+Eventual consistency means on the surface that all updates will propagate throughout all of the replicas in a distributed system, but that this may take some time. Eventually, all replicas will be consistent.
 
-The replication factor lets you decide how much you want to pay in performance to
-gain more consistency. You set the replication factor to the number of nodes in the
-cluster you want the updates to propagate to (remember that an update means any
-add, update, or delete operation).
+Eventual consistency becomes suddenly very attractive when you consider what is required to achieve stronger forms of consistency.
 
-The consistency level is a setting that clients must specify on every operation and that
-allows you to decide how many replicas in the cluster must acknowledge a write oper‐
-ation or respond to a read operation in order to be considered successful. That’s the
-part where Cassandra has pushed the decision for determining consistency out to the
-client.
+When considering consistency, availability, and partition tolerance, we can achieve only two of these goals in a given distributed system, a trade-off known as the CAP theorem.
 
-So if you like, you could set the consistency level to a number equal to the replication
-factor, and gain stronger consistency at the cost of synchronous blocking operations
-that wait for all nodes to be updated and declare success before returning. This is not often done in practice with Cassandra, however, for reasons that should be clear (it
-defeats the availability goal, would impact performance, and generally goes against
-the grain of why you’d want to use Cassandra in the first place). So if the client sets
-the consistency level to a value less than the replication factor, the update is consid‐
-ered successful even if some nodes are down.
+At the center of the problem is data update replication. To achieve a strict consistency, all update operations will be performed synchronously, meaning that they must block, locking all replicas until the operation is complete, and forcing competing clients to wait. A side effect of such a design is that during a failure, some of the data will be entirely unavailable. 
+
+We could alternatively take an optimistic approach to replication, propagating updates to all replicas in the background in order to avoid blowing up on the client. The difficulty this approach presents is that now we are forced into the situation of detecting and resolving conflicts. A design approach must decide whether to resolve these conflicts at one of two possible times: during reads or during writes. That is, a distributed database designer must choose to make the system either always readable or always writable. Dynamo and Cassandra choose to be always writable, opting to defer the complexity of reconciliation to read operations, and realize tremendous performance gains. The alternative is to reject updates amidst network and server failures. In Cassandra, consistency is not an all-or-nothing proposition. We might more accurately term it “tuneable consistency” because the client can control the number of replicas to block on for all updates. This is done by setting the **consistency level** against the **replication factor**.
+
+The **replication factor** lets you decide how much you want to pay in performance to gain more consistency. You set the replication factor to the number of nodes in the cluster you want the updates to propagate to (remember that an update means any add, update, or delete operation).
+
+The **consistency level** is a setting that clients must specify on every operation and that allows you to decide how many replicas in the cluster must acknowledge a write operation or respond to a read operation in order to be considered successful. That’s the part where Cassandra has pushed the decision for determining consistency out to the client.
+
+So if you like, you could set the consistency level to a number equal to the replication factor, and gain stronger consistency at the cost of synchronous blocking operations that wait for all nodes to be updated and declare success before returning. This is not often done in practice with Cassandra, however, for reasons that should be clear (it defeats the availability goal, would impact performance, and generally goes against the grain of why you’d want to use Cassandra in the first place). So if the client sets the consistency level to a value less than the replication factor, the update is considered successful even if some nodes are down.
+
+### Brewer’s CAP Theorem
+
+The theorem states that within a large-scale distributed data system, there are three requirements that have a relationship of sliding dependency:
+
+**Consistency** means that data is the same across the cluster, so you can read or write from/to any node and get the same data.
+
+**Availability** means the ability to access the cluster even if a node in the cluster goes down.
+
+**Partition tolerance** means that the cluster continues to function even if there is a "partition" (communication break) between two nodes (both nodes are up, but can't communicate).
+
+Brewer’s theorem is that in any given system, you can strongly support only two of the three.
+
