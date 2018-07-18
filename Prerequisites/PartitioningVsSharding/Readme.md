@@ -1,4 +1,4 @@
-- [index]()
+- [index](https://github.com/KiraDiShira/Cassandra/blob/master/README.md#cassandra)
 
 # Partitioning vs Sharding
 
