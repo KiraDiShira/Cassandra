@@ -1,6 +1,6 @@
 - [index]()
 
-#Partitioning vs Sharding
+# Partitioning vs Sharding
 
 **Partitioning** is a general term used to describe the act of breaking up your logical data elements into multiple entities for the purpose of performance, availability, or maintainability.  
 
